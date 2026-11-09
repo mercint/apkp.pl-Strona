@@ -50,9 +50,17 @@ jobs:
           if any(p.is_symlink() or any(q.is_symlink() for q in p.parents) for p in files):
               raise SystemExit("Dowiazania symboliczne sa niedozwolone.")
 
+          class HostingFTPS(ftplib.FTP_TLS):
+              # Reuse the authenticated TLS session for protected data connections.
+              def ntransfercmd(self, cmd, rest=None):
+                  conn, size = ftplib.FTP.ntransfercmd(self, cmd, rest)
+                  if self._prot_p:
+                      conn = self.context.wrap_socket(conn, server_hostname=self.host, session=self.sock.session)
+                  return conn, size
+
           stage = "polaczenie FTPS"
           try:
-              with ftplib.FTP_TLS(context=ssl.create_default_context(), timeout=30) as ftp:
+              with HostingFTPS(context=ssl.create_default_context(), timeout=30) as ftp:
                   ftp.connect(os.environ["FTP_HOST"].strip(), 21)
                   stage = "logowanie"
                   ftp.login(os.environ["FTP_USER"].strip(), os.environ["FTP_PASSWORD"].rstrip("\r\n"))
