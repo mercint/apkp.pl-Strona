@@ -1,5 +1,9 @@
 name: LH.pl - test i wdrozenie
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
     inputs:
       mode:
