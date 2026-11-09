@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/deploy.yml'
+      - 'public/**'
   workflow_dispatch:
     inputs:
       mode:
@@ -29,7 +30,7 @@ jobs:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          DEPLOY_MODE: ${{ inputs.mode }}
+          DEPLOY_MODE: ${{ github.event_name == 'push' && 'deploy' || inputs.mode }}
         shell: python
         run: |
           import ftplib
@@ -60,6 +61,7 @@ jobs:
                   stage = "otwarcie folderu public_html/apkp.pl"
                   ftp.cwd("public_html/apkp.pl")
                   print("Polaczenie FTPS i dostep do folderu public_html/apkp.pl: OK.")
+                  stage = "wysylanie plikow"
                   for path in files:
                       relative = path.relative_to(root)
                       entered = 0
