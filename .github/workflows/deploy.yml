@@ -1,0 +1,76 @@
+name: LH.pl - test i wdrozenie
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "test = tylko polaczenie, deploy = wyslanie public/"
+        type: choice
+        default: test
+        options:
+          - test
+          - deploy
+permissions:
+  contents: read
+concurrency:
+  group: lh-production
+  cancel-in-progress: false
+jobs:
+  ftp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: FTPS - folder apkp.pl
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          DEPLOY_MODE: ${{ inputs.mode }}
+        shell: python
+        run: |
+          import ftplib
+          import os
+          import ssl
+          from pathlib import Path
+
+          for key in ("FTP_HOST", "FTP_USER", "FTP_PASSWORD"):
+              if not os.environ.get(key):
+                  raise SystemExit("Brak sekretu: " + key)
+
+          deploy = os.environ["DEPLOY_MODE"] == "deploy"
+          root = Path("public")
+          if deploy and not (root / "index.html").is_file():
+              raise SystemExit("Najpierw dodaj strone w public/index.html.")
+          files = sorted(p for p in root.rglob("*") if p.is_file()) if deploy else []
+          if any(p.is_symlink() or any(q.is_symlink() for q in p.parents) for p in files):
+              raise SystemExit("Dowiazania symboliczne sa niedozwolone.")
+
+          try:
+              with ftplib.FTP_TLS(context=ssl.create_default_context(), timeout=30) as ftp:
+                  ftp.connect(os.environ["FTP_HOST"].strip(), 21)
+                  ftp.login(os.environ["FTP_USER"], os.environ["FTP_PASSWORD"])
+                  ftp.prot_p()
+                  ftp.cwd("apkp.pl")
+                  print("Polaczenie FTPS i dostep do folderu apkp.pl: OK.")
+                  for path in files:
+                      relative = path.relative_to(root)
+                      entered = 0
+                      for part in relative.parts[:-1]:
+                          try:
+                              ftp.cwd(part)
+                          except ftplib.error_perm:
+                              ftp.mkd(part)
+                              ftp.cwd(part)
+                          entered += 1
+                      with path.open("rb") as stream:
+                          ftp.storbinary("STOR " + relative.name, stream)
+                      for _ in range(entered):
+                          ftp.cwd("..")
+                  if deploy:
+                      print("Wyslano pliki:", len(files))
+                  else:
+                      print("Test zakonczony. Nie zmieniono plikow na hostingu.")
+          except Exception as error:
+              print("Operacja nie powiodla sie. Typ bledu:", type(error).__name__)
+              print("Sprawdz sekrety, FTPS na porcie 21 i folder apkp.pl wzgledem katalogu logowania FTP.")
+              raise SystemExit(1)
