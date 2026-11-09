@@ -49,11 +49,15 @@ jobs:
           if any(p.is_symlink() or any(q.is_symlink() for q in p.parents) for p in files):
               raise SystemExit("Dowiazania symboliczne sa niedozwolone.")
 
+          stage = "polaczenie FTPS"
           try:
               with ftplib.FTP_TLS(context=ssl.create_default_context(), timeout=30) as ftp:
                   ftp.connect(os.environ["FTP_HOST"].strip(), 21)
+                  stage = "logowanie"
                   ftp.login(os.environ["FTP_USER"].strip(), os.environ["FTP_PASSWORD"].rstrip("\r\n"))
+                  stage = "szyfrowanie danych"
                   ftp.prot_p()
+                  stage = "otwarcie folderu apkp.pl"
                   ftp.cwd("apkp.pl")
                   print("Polaczenie FTPS i dostep do folderu apkp.pl: OK.")
                   for path in files:
@@ -75,6 +79,9 @@ jobs:
                   else:
                       print("Test zakonczony. Nie zmieniono plikow na hostingu.")
           except Exception as error:
+              print("Etap:", stage)
+              code = str(error)[:3]
+              print("Kod FTP:", code if code.isdigit() else "brak")
               print("Operacja nie powiodla sie. Typ bledu:", type(error).__name__)
               print("Sprawdz sekrety, FTPS na porcie 21 i folder apkp.pl wzgledem katalogu logowania FTP.")
               raise SystemExit(1)
