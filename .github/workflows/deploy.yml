@@ -52,7 +52,7 @@ jobs:
           try:
               with ftplib.FTP_TLS(context=ssl.create_default_context(), timeout=30) as ftp:
                   ftp.connect(os.environ["FTP_HOST"].strip(), 21)
-                  ftp.login(os.environ["FTP_USER"], os.environ["FTP_PASSWORD"])
+                  ftp.login(os.environ["FTP_USER"].strip(), os.environ["FTP_PASSWORD"].rstrip("\r\n"))
                   ftp.prot_p()
                   ftp.cwd("apkp.pl")
                   print("Polaczenie FTPS i dostep do folderu apkp.pl: OK.")
