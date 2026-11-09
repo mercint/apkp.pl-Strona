@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - name: FTPS - folder apkp.pl
+      - name: FTPS - folder public_html/apkp.pl
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
@@ -57,9 +57,9 @@ jobs:
                   ftp.login(os.environ["FTP_USER"].strip(), os.environ["FTP_PASSWORD"].rstrip("\r\n"))
                   stage = "szyfrowanie danych"
                   ftp.prot_p()
-                  stage = "otwarcie folderu apkp.pl"
-                  ftp.cwd("apkp.pl")
-                  print("Polaczenie FTPS i dostep do folderu apkp.pl: OK.")
+                  stage = "otwarcie folderu public_html/apkp.pl"
+                  ftp.cwd("public_html/apkp.pl")
+                  print("Polaczenie FTPS i dostep do folderu public_html/apkp.pl: OK.")
                   for path in files:
                       relative = path.relative_to(root)
                       entered = 0
@@ -83,5 +83,5 @@ jobs:
               code = str(error)[:3]
               print("Kod FTP:", code if code.isdigit() else "brak")
               print("Operacja nie powiodla sie. Typ bledu:", type(error).__name__)
-              print("Sprawdz sekrety, FTPS na porcie 21 i folder apkp.pl wzgledem katalogu logowania FTP.")
+              print("Sprawdz sekrety, FTPS na porcie 21 i folder public_html/apkp.pl wzgledem katalogu logowania FTP.")
               raise SystemExit(1)
