@@ -1,0 +1,41 @@
+# APKP: canonical address, static-site security and caching.
+Options -Indexes
+DirectoryIndex index.html
+ErrorDocument 404 /404.html
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteCond %{HTTPS} !=on [OR]
+RewriteCond %{HTTP_HOST} !^apkp\.pl$ [NC]
+RewriteRule ^ https://apkp.pl%{REQUEST_URI} [R=301,L]
+RewriteCond %{THE_REQUEST} \s/+index\.html[?\s] [NC]
+RewriteRule ^index\.html$ https://apkp.pl/ [R=301,L]
+# Only public read operations are needed by this static website.
+RewriteCond %{REQUEST_METHOD} !^(GET|HEAD|OPTIONS)$ [NC]
+RewriteRule ^ - [F,L]
+# Reject probes for services and private directories not used by APKP.
+RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L]
+RewriteRule ^(?:wp-admin|wp-login\.php|xmlrpc\.php|phpmyadmin|vendor|node_modules|cgi-bin)(?:/|$) - [F,L,NC]
+</IfModule>
+
+<FilesMatch "(?i)(^\.|\.(env|ini|log|sql|bak|old|zip|tar|gz|yml|yaml|toml|sh|py|php|phtml|phar)$|^(?:composer|package)(?:-lock)?\.json$)">
+Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+Header always set X-Content-Type-Options "nosniff"
+Header always set X-Frame-Options "DENY"
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+Header always set Strict-Transport-Security "max-age=2592000"
+Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-/1EM3hoNnxO49pieZYkxP2oqcF2Nc8nTRQnbWz74oOg=' 'sha256-tis7/eWGAPPDXikXr15KCHg64oMcbFB12lJm+pkd+zg='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; upgrade-insecure-requests"
+<FilesMatch "\.(?:webp|png|svg|jpg|jpeg|gif|ico)$">
+Header set Cache-Control "public, max-age=604800"
+</FilesMatch>
+<FilesMatch "\.(?:html|xml|txt)$">
+Header set Cache-Control "public, max-age=0, must-revalidate"
+</FilesMatch>
+</IfModule>
+<IfModule mod_deflate.c>
+AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json application/xml image/svg+xml
+</IfModule>
